@@ -46,6 +46,20 @@ def test_derivative_resolves_the_quiescent_switch():
     assert jax.grad(pr)(nsqr, 1e-7) == pytest.approx(float(expected))
 
 
+def test_derivative_is_bounded_where_the_shear_is_weak():
+    """Weak but resolved shear: the reference ramp is steep; the surrogate's slope stays below 6.6 / floor."""
+    jax, jnp, tke = _setup()
+    floor = 3e-7
+    shear = jnp.array(1e-7)  # a few mm/s across 10 m: well above the 1e-12 floor, below the surrogate's
+    nsqr = jnp.array(5.5 / 6.6 * 1e-7)  # 6.6 Ri = 5.5, mid-way up the reference ramp
+
+    def pr(n, floor):
+        return tke.prandtl_number(n, shear, None, floor, 0.5)
+
+    assert jax.grad(pr)(nsqr, 0.0) == pytest.approx(6.6e7)
+    assert 0.0 < jax.grad(pr)(nsqr, floor) < 6.6 / floor
+
+
 def test_derivative_is_the_reference_where_the_shear_is_resolved():
     """Away from the floor and the clip corners the surrogate's slope is the reference's.
 

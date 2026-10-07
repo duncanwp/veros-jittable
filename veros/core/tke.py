@@ -40,6 +40,17 @@ def prandtl_number(Nsqr, shear_squared, internal_wave_bound, shear_floor, clip_w
     perturbation larger than ~1e-4 K reproduces, and a multi-step adjoint
     carries it along.
 
+    The same switch survives, less violently, wherever the shear is resolved
+    but weak. The ramp between the clips spans `Nsqr` from `shear_squared /
+    6.6` to `10 * shear_squared / 6.6`, so its slope is `6.6 / shear_squared`
+    and its width ~1.4 * `shear_squared`; with `shear_squared` ~1e-7 s^-2 (a
+    few mm/s of velocity difference across a 10 m layer, the shear of a
+    column that is barely moving) the whole 1-to-10 switch lies inside the
+    ~2e-6 s^-2 change in `Nsqr` that a 0.01 K surface perturbation makes. The
+    derivative there is the true local slope, but it holds only for
+    perturbations of ~1e-4 K, and it put isolated spikes 5-10 times the
+    finite-difference response into the adjoint of a global one-degree run.
+
     The derivative is therefore taken from a surrogate
     (`utilities.with_surrogate_gradient`, the construction of jax-gcm's
     `jcm.physics.surrogate_gradient`): the same formula with the shear floor
@@ -47,9 +58,18 @@ def prandtl_number(Nsqr, shear_squared, internal_wave_bound, shear_floor, clip_w
     Wherever the shear well exceeds `shear_floor` its slope is the
     reference's to within the tails of the clip's hyperbolic rounding (under
     1% mid-way between the corners for the default width); where the shear
-    is below the floor it spreads the switch over `0 < Nsqr < ~1.5 *
-    shear_floor`. `shear_floor = 0`
-    selects the reference derivative.
+    is at or below the floor it spreads the switch over `0 < Nsqr < ~1.5 *
+    shear_floor`, so the slope never exceeds ~`6.6 / shear_floor`.
+    `shear_floor = 0` selects the reference derivative.
+
+    The default floor, 3e-7 s^-2, was chosen against finite differences of
+    0.01 K in a global one-degree run (24 hourly steps, a random-weighted
+    global SST objective): it brought the gradient at the spike cells to
+    within a factor ~2 of the 0.01 K response without moving the median or
+    the 99th percentile of the gradient. 1e-7 left the weak-shear spikes in
+    place, and 1e-6 or more flattened the slope below the 0.01 K response
+    (and flipped its sign in one cell): a larger floor discards real
+    sensitivity, not just the switch.
     """
 
     def exact(Nsqr, shear_squared, internal_wave_bound):

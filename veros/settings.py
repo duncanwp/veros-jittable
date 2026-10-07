@@ -149,11 +149,11 @@ SETTINGS = {
         10.0, float, "Constant Prandtl number when stratification is neglected for kappaH computation in TKE routine"
     ),
     "tke_prandtl_surrogate_shear_floor": Setting(
-        1e-7,
+        3e-7,
         float,
         "Shear-squared scale (s^-2) below which the derivative of the TKE Prandtl number treats the shear as "
-        "this value (the value of the Prandtl number is unchanged; see veros.core.tke.prandtl_number). "
-        "0 selects the reference derivative",
+        "this value (the value of the Prandtl number is unchanged; see veros.core.tke.prandtl_number for how "
+        "the default was chosen). 0 selects the reference derivative",
     ),
     "tke_prandtl_surrogate_width": Setting(
         0.5,
