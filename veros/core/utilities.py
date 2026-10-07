@@ -85,3 +85,50 @@ def solve_implicit(a, b, c, d, water_mask, edge_mask, b_edge=None, d_edge=None):
         d = npx.where(edge_mask, d_edge, d)
 
     return solve_tridiagonal(a, b, c, d, water_mask, edge_mask)
+
+
+def with_surrogate_gradient(exact, surrogate):
+    """
+    Return a function with `exact`'s value and `surrogate`'s derivatives.
+
+    The same construction as jax-gcm's `jcm.physics.surrogate_gradient`:
+    the value is `exact(*args)` bit for bit, so the forward model is
+    unchanged, while every derivative (forward and reverse mode, any order)
+    is that of the smooth function `surrogate`, taken by differentiating it.
+    Use it where the reference derivative carries no usable information --
+    a threshold switch whose ramp is far narrower than any perturbation of
+    interest, a plateau, a singular point -- not for an ordinary bounded kink.
+
+    Under the NumPy backend there are no derivatives, and `exact` itself is
+    returned.
+    """
+    from veros import runtime_settings
+
+    if runtime_settings.backend != "jax":
+        return exact
+
+    import jax
+
+    @jax.custom_jvp
+    def f(*args):
+        return exact(*args)
+
+    @f.defjvp
+    def f_jvp(primals, tangents):
+        # The value comes from `f`, not `exact`, so that differentiating
+        # twice meets this rule again rather than `exact`'s kinks.
+        _, tangent_out = jax.jvp(surrogate, primals, tangents)
+        return f(*primals), tangent_out
+
+    return f
+
+
+def smooth_maximum(a, b, width):
+    """`max(a, b)` with its corner rounded over `width`: `(a + b + sqrt((a - b)**2 + width**2)) / 2`."""
+    return 0.5 * (a + b + npx.sqrt((a - b) ** 2 + width**2))
+
+
+def smooth_minimum(a, b, width):
+    """`min(a, b)` with its corner rounded over `width`."""
+    return -smooth_maximum(-a, -b, width)
+

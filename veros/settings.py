@@ -148,6 +148,19 @@ SETTINGS = {
     "Prandtl_tke0": Setting(
         10.0, float, "Constant Prandtl number when stratification is neglected for kappaH computation in TKE routine"
     ),
+    "tke_prandtl_surrogate_shear_floor": Setting(
+        1e-7,
+        float,
+        "Shear-squared scale (s^-2) below which the derivative of the TKE Prandtl number treats the shear as "
+        "this value (the value of the Prandtl number is unchanged; see veros.core.tke.prandtl_number). "
+        "0 selects the reference derivative",
+    ),
+    "tke_prandtl_surrogate_width": Setting(
+        0.5,
+        float,
+        "Width over which the derivative of the TKE Prandtl number rounds its clip to [1, 10] "
+        "(the value is unchanged; see veros.core.tke.prandtl_number)",
+    ),
     # Debugging
     "enable_nan_checks": Setting(
         False, bool, "Scan state for NaN/Inf values at debug checkpoints sprinkled through the model (slow; see veros.debug_tools.detect_nan_in_state)"
