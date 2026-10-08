@@ -83,6 +83,13 @@ SETTINGS = {
     # Options for isopycnal mixing
     "enable_neutral_diffusion": Setting(False, bool, "enable isopycnal mixing"),
     "enable_skew_diffusion": Setting(False, bool, "enable skew diffusion approach for eddy-driven velocities"),
+    "enable_isoneutral_tensor_derivative": Setting(
+        False,
+        bool,
+        "Differentiate the isoneutral slopes and diffusivities with respect to the model state (JAX backend). "
+        "Off by default: their value is unchanged, but their linearisation is not dissipative and makes "
+        "tangent-linear and adjoint runs unstable (see veros.core.isoneutral.isoneutral_diffusion_pre)",
+    ),
     "enable_TEM_friction": Setting(False, bool, "TEM approach for eddy-driven velocities"),
     "K_iso_0": Setting(0.0, float, "constant for isopycnal diffusivity in m^2/s"),
     "K_iso_steep": Setting(0.0, float, "lateral diffusivity for steep slopes in m^2/s"),

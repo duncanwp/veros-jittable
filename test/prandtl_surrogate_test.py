@@ -42,7 +42,8 @@ def test_derivative_resolves_the_quiescent_switch():
     assert 0.0 < surrogate_slope < 1e9
     # Inside the switch window the surrogate's slope is the slope of its own smooth formula.
     nsqr = jnp.array(5e-8)
-    expected = jax.grad(lambda n: tke._prandtl_from_richardson(n / tke.utilities.smooth_maximum(0.0, 1e-7, 1e-7), 0.5))(nsqr)
+    effective_shear = tke.utilities.smooth_maximum(0.0, 1e-7, 1e-7)
+    expected = jax.grad(lambda n: tke._prandtl_from_richardson(n / effective_shear, 0.5))(nsqr)
     assert jax.grad(pr)(nsqr, 1e-7) == pytest.approx(float(expected))
 
 

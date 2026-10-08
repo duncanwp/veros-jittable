@@ -123,6 +123,23 @@ def with_surrogate_gradient(exact, surrogate):
     return f
 
 
+def without_derivative(x):
+    """
+    `x` itself, with every derivative through it treated as zero.
+
+    `jax.lax.stop_gradient` under the JAX backend; under the NumPy backend
+    there are no derivatives and `x` is returned unchanged.
+    """
+    from veros import runtime_settings
+
+    if runtime_settings.backend != "jax":
+        return x
+
+    import jax
+
+    return jax.lax.stop_gradient(x)
+
+
 def smooth_maximum(a, b, width):
     """`max(a, b)` with its corner rounded over `width`: `(a + b + sqrt((a - b)**2 + width**2)) / 2`."""
     return 0.5 * (a + b + npx.sqrt((a - b) ** 2 + width**2))

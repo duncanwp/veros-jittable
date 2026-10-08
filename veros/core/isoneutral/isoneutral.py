@@ -21,6 +21,33 @@ def isoneutral_diffusion_pre(state):
     Isopycnal diffusion for tracer
     following functional formulation by Griffies et al
     Code adopted from MOM2.1
+
+    The slopes (`Ai_*`) and the diffusivities (`K_11`, `K_22`, `K_33`) this
+    returns are the reference values. Unless
+    `settings.enable_isoneutral_tensor_derivative` is set, their derivative
+    with respect to the model state is zero: a tangent-linear or adjoint run
+    treats the mixing tensor as fixed within each time step, while still
+    differentiating the isoneutral and skew fluxes with respect to the tracer
+    they mix.
+
+    The reason is that the linearised tensor is not dissipative. Its slopes
+    go as `1 / drho/dz`, and in Griffies' triad scheme the slope terms of the
+    flux of a density-carrying tracer nearly cancel. Differentiating the
+    slopes keeps both halves of that cancellation in the tangent-linear
+    model, but nothing there keeps it stable. In the adjoint of a one-degree
+    global ocean coupled to an atmosphere, this made cotangents in eddying
+    currents (off Cape Hatteras, in the Gulf of Alaska) grow by 10^3 within
+    a few hourly steps, alternating in sign from step to
+    step, and then collapse. Holding the tensor fixed removes them; that
+    operator is a symmetric positive semi-definite diffusion, as in the
+    forward model. Differentiating only part of the tensor (`K_33` alone
+    fixed), or a surrogate with the stratification floored at
+    `drho/dz = -1e-4 kg m^-4` (N^2 ~ 1e-6 s^-2), was worse: it broke the
+    cancellation and produced growth of 10^6-10^8 elsewhere. A floor of
+    1e-3 kg m^-4 (N^2 ~ 1e-5 s^-2, ordinary thermocline stratification) was
+    indistinguishable from holding the tensor fixed. Operational 4D-Var
+    makes the same kind of simplification in its linearised physics, where
+    perturbations of mixing coefficients are commonly neglected.
     """
     vs = state.variables
     settings = state.settings
@@ -224,9 +251,12 @@ def isoneutral_diffusion_pre(state):
     )
     vs.K_33 = update(vs.K_33, at[..., -1], 0.0)
 
-    return KernelOutput(
+    tensor = dict(
         Ai_ez=vs.Ai_ez, Ai_nz=vs.Ai_nz, Ai_bx=vs.Ai_bx, Ai_by=vs.Ai_by, K_11=vs.K_11, K_22=vs.K_22, K_33=vs.K_33
     )
+    if not settings.enable_isoneutral_tensor_derivative:
+        tensor = {name: utilities.without_derivative(value) for name, value in tensor.items()}
+    return KernelOutput(**tensor)
 
 
 @veros_kernel
